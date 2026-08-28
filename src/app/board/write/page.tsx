@@ -33,6 +33,10 @@ function WriteInner() {
   }, [board.cats.length]);
   const [secret, setSecret] = useState(false);
   const [notice, setNotice] = useState(false);
+  // 태그 (v2.0 사용자 요청) — 쉼표로 구분해 입력, 저장할 때 배열로
+  const [tagsText, setTagsText] = useState('');
+  const parseTags = (s: string) =>
+    [...new Set(s.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean))];
   const [foldType, setFoldType] = useState<FoldType | 'none'>('none');
   const [foldLabel, setFoldLabel] = useState('');
   // 티켓 스킨 대표 이미지 (v1.9) — 본문에 삽입한 이미지 중 선택 + 16:9 썸네일 크롭
@@ -65,6 +69,7 @@ function WriteInner() {
     setCategory(p.category);
     setSecret(p.secret); setNotice(p.notice);
     setFoldType(p.fold?.type ?? 'none'); setFoldLabel(p.fold?.label ?? '');
+    setTagsText((p.tags ?? []).join(', '));
     setThumbSrc(p.thumbSrc); setThumbCrop(p.thumbCrop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editPid, postsLoaded, posts]);
@@ -91,6 +96,7 @@ function WriteInner() {
         authored: writeMode === 'editor' ? 'editor' : undefined,
         category,
         secret, notice: isAdmin ? notice : p.notice,
+        tags: parseTags(tagsText),
         fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
         thumbSrc, thumbCrop,
       } : p)));
@@ -103,6 +109,7 @@ function WriteInner() {
       mode: writeMode === 'md' ? 'md' : 'html', category,
       author: user.nickname, authorId: user.id, date: new Date().toISOString(),
       secret, notice: isAdmin && notice,
+      tags: parseTags(tagsText),
       fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
       comments: [],
       boardId: board.id,   // 소속 게시판 (5.2 다중 게시판)
@@ -115,7 +122,9 @@ function WriteInner() {
 
   return (
     <section className="page">
-      <div className="page-head"><PageTitle>{editing ? 'EDIT' : 'WRITE'}</PageTitle><EditableDesc k="board-write-desc" def="에디터 / Markdown / HTML — 스크립트는 저장 시 자동 제거" /></div>
+      {/* 큰 글씨 — 추가 게시판이면 그 이름(메뉴 관리 타이틀·이름이 우선), 누르면 그 게시판으로 복귀
+          (v2.0 사용자 제보 — 「글쓰기에서 큰제목을 눌러도 안 돌아가고, 제목도 원래 것이 뜬다」) */}
+      <div className="page-head"><PageTitle href={boardHref(board.id)}>{board.id === MAIN_BOARD_ID ? (editing ? 'EDIT' : 'WRITE') : board.name}</PageTitle><EditableDesc k="board-write-desc" def="에디터 / Markdown / HTML — 스크립트는 저장 시 자동 제거" /></div>
       <div className="write-grid">
         {/* 좌: 본문 */}
         <div className="panel" style={{ padding: 24 }}>
@@ -181,6 +190,12 @@ function WriteInner() {
               <label className="k-label" style={{ width: 60 }}>말머리</label>
               <KSelect minWidth={130} value={category} onChange={setCategory}
                 options={board.cats.map(x => ({ value: x.label, label: x.label }))} placeholder='말머리 선택' />
+            </div>
+            {/* 태그 (v2.0 사용자 요청) — 목록의 작성자 왼쪽에 나열되고 검색에 걸린다 */}
+            <div className="form-row">
+              <label className="k-label" style={{ width: 60 }}>태그</label>
+              <KInput value={tagsText} onChange={e => setTagsText(e.target.value)}
+                placeholder="쉼표로 구분" style={{ flex: 1 }} />
             </div>
             <div style={{ display: 'grid', gap: 9 }}>
               <KCheck label="비밀글 (관리자와 나만 열람)" checked={secret} onChange={setSecret} />

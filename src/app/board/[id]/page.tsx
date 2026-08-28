@@ -142,6 +142,10 @@ export default function BoardDetailPage() {
         </h2>
         <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 18 }}>
           {post.author} · {fmtDate(post.date)} · {post.mode.toUpperCase()}
+          {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
+          {(post.tags ?? []).map(t => (
+            <span key={t} style={{ marginLeft: 7, color: 'color-mix(in srgb,var(--accent) 65%,var(--faint))' }}>#{t}</span>
+          ))}
         </p>
 
         {/* 접기 (6.2) — 흐림 커버, 클릭 시 표시 */}
