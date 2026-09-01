@@ -8,8 +8,8 @@ import { Character, CharTab, ColorChip, Visibility, CharGrant } from '@/lib/char
 import { GrantsEditor } from '@/components/chars/GrantsEditor';
 import { newId } from '@/lib/postStore';
 import { putBlob, getBlob, useBlobUrl } from '@/lib/blobStore';
-import { useFonts } from '@/lib/fontStore';
-import { KInput, KSelect, KStep } from '@/components/ui/Kit';
+import { useFonts, deVarFamily } from '@/lib/fontStore';
+import { KInput, KSelect, KStep, KCheck } from '@/components/ui/Kit';
 import { RichEditor } from '@/components/ui/RichEditor';
 import { ColorField } from '@/components/ui/ColorField';
 import { CropEditor, CropValue, CropImg } from '@/components/ui/CropEditor';
@@ -54,6 +54,7 @@ export function CharEditForm({ initial, onSave, onCancel, auMode, existingIds }:
   const [visibility, setVisibility] = useState<Visibility>(initial?.visibility ?? 'public');
   const [fontId, setFontId] = useState(initial?.fontId ?? 'serif');
   const [nameSize, setNameSize] = useState(initial?.nameSize ?? 38);   // 상세 큰 이름 크기 (v2.0)
+  const [nameBold, setNameBold] = useState(initial?.nameBold ?? true); // 상세 이름 볼드 (v2.0 — 기본 켜짐)
   const [bodyFontId, setBodyFontId] = useState(initial?.bodyFontId ?? 'default');
   const [specs, setSpecs] = useState<SpecRow[]>(
     (initial?.specs ?? [{ label: '성별', value: '' }, { label: '키', value: '' }]).map(s => ({ ...s, id: newId() })));
@@ -109,6 +110,7 @@ export function CharEditForm({ initial, onSave, onCancel, auMode, existingIds }:
       visibility,
       fontId,
       nameSize,
+      nameBold,
       bodyFontId,
       thumbClass: initial?.thumbClass ?? '',
       arts: artIds,
@@ -265,11 +267,15 @@ export function CharEditForm({ initial, onSave, onCancel, auMode, existingIds }:
             setView(id); // 바로 전용 편집 화면으로
           }}>＋ ADD TAB</button>
 
-        {/* 상대 캐릭터 회원 권한 — 역극 플레이 / 편집까지 (3차 회원-캐릭터 연결, v1.9) — AU 편집에선 base 소관.
+        {/* 회원 권한 — 역극 플레이 / 편집까지 (3차 회원-캐릭터 연결, v1.9) — AU 편집에선 base 소관.
             **관리자만** (v2.0 사용자 확정) — 편집 권한을 받은 회원이 이 화면에 들어와도
             권한 관리는 못 한다. 열어 두면 자기가 받은 권한으로 남에게 권한을 나눠 줄 수 있다.
-            저장 시에는 기존 grants가 그대로 보존된다(이 화면에서 건드리지 않으므로). */}
-        {!auMode && initial?.own === false && isAdmin && (
+            저장 시에는 기존 grants가 그대로 보존된다(이 화면에서 건드리지 않으므로).
+            **own 여부와 무관하게** (v2.0 포크 제보) — 예전에는 상대 캐릭터(own=false)에만 떠서,
+            상대방 캐릭터까지 정식 캐릭터로 직접 등록해 쓰는 홈에서는 권한을 줄 방법이 없었다.
+            관리자 전용이 된 지금은 이 제한이 있을 이유가 없다 — 권한 판정(charGrant·역극 참여)은
+            원래부터 own을 보지 않는다. */}
+        {!auMode && isAdmin && (
           <>
             <label className="k-label" style={{ margin: '6px 0 0' }}>회원 권한 — 역극 플레이 · 캐릭터 편집</label>
             <GrantsEditor value={grants} onChange={setGrants} />
@@ -318,23 +324,26 @@ export function CharEditForm({ initial, onSave, onCancel, auMode, existingIds }:
                   { value: 'private', label: '나만보기' },
                 ]} />
             )}
+            {/* 설명은 드롭다운 **위에** (v2.0 사용자 요청 — 자관 폼과 같은 배치) */}
+            <p className="hint" style={{ margin: '2px 0 0' }}>이름 폰트 — 리스트·상세 이름에 적용</p>
             <KSelect value={fontId} onChange={setFontId}
               options={fonts.map(f => ({
                 value: f.id,
-                label: <span style={{ fontFamily: f.family }}>{f.name}</span>,
+                label: <span style={{ fontFamily: deVarFamily(f.family) }}>{f.name}</span>,
               }))} />
-            <p className="hint" style={{ margin: 0 }}>이름 폰트 — 리스트·상세 이름에 적용</p>
             {/* 이름 길이가 제각각이라 자동으로 줄이면 어중간해진다 — 캐릭터마다 직접 정한다 (v2.0) */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className="k-label" style={{ margin: 0, flex: 1 }}>상세 이름 크기</span>
+              {/* 폰트에 따라 볼드가 어색한 경우가 있어 끌 수 있게 (v2.0 사용자 요청) — 기본은 지금까지처럼 볼드 */}
+              <KCheck label="Bold" checked={nameBold} onChange={setNameBold} />
               <KStep value={nameSize} onChange={setNameSize} min={14} max={72} step={1} suffix="px" />
             </div>
+            <p className="hint" style={{ margin: '2px 0 0' }}>본문 폰트 — 프로필 정보·소개 텍스트에 적용</p>
             <KSelect value={bodyFontId} onChange={setBodyFontId}
               options={fonts.map(f => ({
                 value: f.id,
-                label: <span style={{ fontFamily: f.family }}>{f.name}</span>,
+                label: <span style={{ fontFamily: deVarFamily(f.family) }}>{f.name}</span>,
               }))} />
-            <p className="hint" style={{ margin: 0 }}>본문 폰트 — 프로필 정보·소개 텍스트에 적용</p>
           </div>
         </div>
         <div className="form-actions">
