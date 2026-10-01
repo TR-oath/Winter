@@ -262,7 +262,7 @@ export default function RelDetailPage() {
   const [tlCtx, setTlCtx] = useState<{ x: number; y: number; idx: number } | null>(null);
   const [tlEditIdx, setTlEditIdx] = useState<number | null>(null);   // null이면 새로 추가
   const rel = findByKey(rels, id);
-const isWinterWolf = rel?.title?.includes('겨울늑대') || rel?.name?.includes('겨울늑대');
+const isWinterWolf = true;
   useEffect(() => {
     if (!tlCtx) return;
     const close = () => setTlCtx(null);
