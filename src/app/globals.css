@@ -1015,8 +1015,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .page-rel-detail{position:relative;max-width:1280px}
 /* 배경 위 레이어링 — absolute로 배치되는 요소(AU·관리자 액션·모달)는 제외 */
 .page-rel-detail > *:not(.rel-backdrop):not(.modal-ov):not(.au-list):not(.rel-admin-actions){position:relative;z-index:1}
-.rel-backdrop{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100vw;height:600px;z-index:0!important;overflow:hidden;pointer-events:none;
-  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 35%,transparent 96%);
+.rel-backdrop{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100vw;height:600px;z-index:0;overflow:hidden;pointer-events:none;
   mask-image:linear-gradient(to bottom,#000 0%,#000 35%,transparent 96%);}
 /* 헤더 이미지가 있을 때만 이 블록 자체가 렌더된다 (v2.0) — 예전엔 없을 때도 데모
    그라데이션을 깔았는데, 없으면 아예 안 그리는 쪽으로 바뀌어 배경색 자체가 필요 없어졌다 */
