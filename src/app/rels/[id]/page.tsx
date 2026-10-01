@@ -31,6 +31,7 @@ import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/Crop
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import SnowEffect from '@/components/SnowEffect';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -260,6 +261,8 @@ export default function RelDetailPage() {
   // 타임라인 항목 우클릭 메뉴 (v2.0 사용자 요청) — 수정·삭제. 늘 떠 있는 [삭제] 글자는 없앴다
   const [tlCtx, setTlCtx] = useState<{ x: number; y: number; idx: number } | null>(null);
   const [tlEditIdx, setTlEditIdx] = useState<number | null>(null);   // null이면 새로 추가
+  const rel = findByKey(rels, id);
+const isWinterWolf = rel?.title?.includes('겨울늑대') || rel?.name?.includes('겨울늑대');
   useEffect(() => {
     if (!tlCtx) return;
     const close = () => setTlCtx(null);
@@ -784,6 +787,7 @@ export default function RelDetailPage() {
 
   return (
     <section className="page page-rel-detail">
+      {isWinterWolf && <SnowEffect />}
       {/* 헤더 이미지 (v1.5) — 풀폭 블러 + 아래로 페이드아웃.
           AU별 완전 분리 (v1.9 사용자 확정): AU는 자기 헤더만 — base 것을 물려받지 않음.
           이미지가 없으면 아무것도 안 그리는 게 기본(v2.0) — 다만 자관 수정에서 배경 그라데이션을
