@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function SnowEffect() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -15,7 +22,6 @@ export default function SnowEffect() {
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
-    // 💡 화면 폭에 비례하여 눈송이 수 조절 (모바일은 가볍게 15~20개, PC는 60~70개)
     const flakeCount = Math.max(15, Math.floor(width / 25));
 
     const handleResize = () => {
@@ -28,8 +34,8 @@ export default function SnowEffect() {
     const flakes = Array.from({ length: flakeCount }).map(() => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      r: Math.random() * 2.5 + 1, // 눈송이 크기 살짝 정돈
-      d: Math.random() * 0.8 + 0.4, // 낙하 속도 정돈
+      r: Math.random() * 2.5 + 1,
+      d: Math.random() * 0.8 + 0.4,
     }));
 
     const draw = () => {
@@ -59,9 +65,12 @@ export default function SnowEffect() {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [mounted]);
 
-  return (
+  if (!mounted) return null;
+
+  // 💡 createPortal을 사용해 document.body 바로 밑으로 canvas를 격리합니다.
+  return createPortal(
     <canvas
       ref={canvasRef}
       style={{
@@ -72,8 +81,9 @@ export default function SnowEffect() {
         height: '100vh',
         display: 'block',
         pointerEvents: 'none',
-        zIndex: 10,
+        zIndex: 9999,
       }}
-    />
+    />,
+    document.body
   );
 }
