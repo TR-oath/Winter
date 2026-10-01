@@ -15,6 +15,9 @@ export default function SnowEffect() {
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
+    // 💡 화면 폭에 비례하여 눈송이 수 조절 (모바일은 가볍게 15~20개, PC는 60~70개)
+    const flakeCount = Math.max(15, Math.floor(width / 25));
+
     const handleResize = () => {
       if (!canvas) return;
       width = canvas.width = window.innerWidth;
@@ -22,16 +25,16 @@ export default function SnowEffect() {
     };
     window.addEventListener('resize', handleResize);
 
-    const flakes = Array.from({ length: 70 }).map(() => ({
+    const flakes = Array.from({ length: flakeCount }).map(() => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      r: Math.random() * 3 + 1,
-      d: Math.random() * 1 + 0.5,
+      r: Math.random() * 2.5 + 1, // 눈송이 크기 살짝 정돈
+      d: Math.random() * 0.8 + 0.4, // 낙하 속도 정돈
     }));
 
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
       ctx.beginPath();
       for (const f of flakes) {
         ctx.moveTo(f.x, f.y);
@@ -65,10 +68,12 @@ export default function SnowEffect() {
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100vw',
-        height: '100vh',
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
         pointerEvents: 'none',
-        zIndex: 9999,
+        zIndex: 10, // 💡 헤더/GNB 요소에 영향을 주지 않도록 적절한 레이어로 낮춤
       }}
     />
   );
