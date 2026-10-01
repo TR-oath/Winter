@@ -784,9 +784,8 @@ const isWinterWolf = (rel as any)?.name?.includes('겨울늑대') || id?.include
   };
 
   return (
-  <>
+ <section className="page page-rel-detail">
     {isWinterWolf && <SnowEffect />}
-    <section className="page page-rel-detail">
       {/* 헤더 이미지 (v1.5) — 풀폭 블러 + 아래로 페이드아웃.
           AU별 완전 분리 (v1.9 사용자 확정): AU는 자기 헤더만 — base 것을 물려받지 않음.
           이미지가 없으면 아무것도 안 그리는 게 기본(v2.0) — 다만 자관 수정에서 배경 그라데이션을
@@ -1653,6 +1652,5 @@ const isWinterWolf = (rel as any)?.name?.includes('겨울늑대') || id?.include
       {/* 삭제 확인 — DOM 마지막에 렌더해 다른 모달(AU 관리 등) 위에 뜨게 */}
       {del.element}
     </section>
-    </>
   );
 }
