@@ -1808,12 +1808,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .up-spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--line-dark);border-top-color:var(--accent);animation:upSpin .7s linear infinite;flex-shrink:0}
 @keyframes upSpin{to{transform:rotate(360deg)}}
 /* 최상위 여백만 제거 (글자 및 내부 레이아웃 영향 없음) */
-body {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-
-/* 모바일 뷰포트 여백 방지 */
+/* 헤더 내부 요소 상단 여백 보장 및 레이아웃 정상화 */
 .page-rel-detail {
-  isolation: isolate;
+  padding-top: env(safe-area-inset-top, 0px);
 }
