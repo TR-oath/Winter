@@ -359,7 +359,7 @@ export default function RelDetailPage() {
 
   // 별명 주소로도 열린다 (v2.0 사용자 요청 — 주소를 나중에 바꿔도 옛 주소가 살아 있게)
   const rel = findByKey(rels, id);
-const isWinterWolf = rel?.title?.includes('겨울늑대') || rel?.name?.includes('겨울늑대');
+const isWinterWolf = (rel as any)?.name?.includes('겨울늑대') || id?.includes('겨울늑대');
   // 자관별 페이지 테마 (4.18 방식) — 별도 테마컬러면 홈 전체 팔레트를 임시 전환, 벗어나면 원복.
   // AU별 (v1.9): AU에 테마를 지정했으면 그것, 미지정이면 base(원본) 테마 따라가기
   const { setPageTheme, setPageBg } = useTheme();
