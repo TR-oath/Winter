@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export default function SnowEffect() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -68,7 +68,7 @@ export default function SnowEffect() {
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
-        zIndex: 9999, // 화면 맨 최상단으로 올림
+        zIndex: 9999,
       }}
     />
   );
