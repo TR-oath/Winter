@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function SnowEffect() {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -13,44 +14,49 @@ export default function SnowEffect() {
 
   useEffect(() => {
     if (!mounted) return;
+    const wrap = wrapRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!wrap || !canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let animationFrameId = 0;
+    let raf = 0;
     let width = 0;
     let height = 0;
 
+    type Flake = { x: number; y: number; r: number; d: number };
+    let flakes: Flake[] = [];
+
+    const makeFlakes = () => {
+      const count = Math.max(15, Math.floor(width / 25));
+      flakes = Array.from({ length: count }).map(() => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 2.5 + 1,
+        d: Math.random() * 0.8 + 0.4,
+      }));
+    };
+
+    // window.innerWidth 대신 래퍼의 실제 크기를 읽는다 (확대/축소 상태와 무관)
     const resize = () => {
-      // documentElement.clientWidth: 스크롤바를 뺀 실제 보이는 폭
-      width = document.documentElement.clientWidth;
-      height = window.innerHeight;
+      const rect = wrap.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(rect.width));
+      const h = Math.max(1, Math.floor(rect.height));
+      if (w === width && h === height) return;
+      width = w;
+      height = h;
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (flakes.length === 0) makeFlakes();
+      else for (const f of flakes) if (f.x > width) f.x = Math.random() * width;
     };
+
     resize();
-
-    const flakeCount = Math.max(15, Math.floor(width / 25));
-    const flakes = Array.from({ length: flakeCount }).map(() => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: Math.random() * 2.5 + 1,
-      d: Math.random() * 0.8 + 0.4,
-    }));
-
-    const handleResize = () => {
-      resize();
-      // 폭이 줄었을 때 화면 밖에 남은 눈송이를 안으로 되돌림
-      for (const f of flakes) {
-        if (f.x > width) f.x = Math.random() * width;
-      }
-    };
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(wrap);
 
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
@@ -72,33 +78,46 @@ export default function SnowEffect() {
         if (f.x > width + 10) f.x = -10;
         if (f.x < -10) f.x = width + 10;
       }
-      animationFrameId = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(draw);
     };
     draw();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
+      cancelAnimationFrame(raf);
+      ro.disconnect();
     };
   }, [mounted]);
 
   if (!mounted) return null;
 
   return createPortal(
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={wrapRef}
       aria-hidden="true"
       style={{
         position: 'fixed',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        display: 'block',
-        pointerEvents: 'none',
-        zIndex: 60, // 모달·메뉴(100대)보다 낮게
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         overflow: 'hidden',
+        contain: 'strict',
+        pointerEvents: 'none',
+        zIndex: 60,
       }}
-    />,
-    document.body
+    >
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+        }}
+      />
+    </div>,
+    document.body,
   );
 }
