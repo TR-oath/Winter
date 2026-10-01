@@ -261,7 +261,6 @@ export default function RelDetailPage() {
   // 타임라인 항목 우클릭 메뉴 (v2.0 사용자 요청) — 수정·삭제. 늘 떠 있는 [삭제] 글자는 없앴다
   const [tlCtx, setTlCtx] = useState<{ x: number; y: number; idx: number } | null>(null);
   const [tlEditIdx, setTlEditIdx] = useState<number | null>(null);   // null이면 새로 추가
-  const rel = findByKey(rels, id);
 const isWinterWolf = true;
   useEffect(() => {
     if (!tlCtx) return;
