@@ -68,12 +68,11 @@ export default function SnowEffect() {
         position: 'fixed',
         top: 0,
         left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
+        display: 'block',
         pointerEvents: 'none',
-        zIndex: 10, // 💡 헤더/GNB 요소에 영향을 주지 않도록 적절한 레이어로 낮춤
+        zIndex: 10,
       }}
     />
   );
