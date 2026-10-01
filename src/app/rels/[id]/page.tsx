@@ -784,7 +784,7 @@ const isWinterWolf = (rel as any)?.name?.includes('겨울늑대') || id?.include
   };
 
   return (
- <section className="page page-rel-detail">
+<section className="page page-rel-detail" style={{ paddingTop: 0, marginTop: 0 }}>
     {isWinterWolf && <SnowEffect />}
       {/* 헤더 이미지 (v1.5) — 풀폭 블러 + 아래로 페이드아웃.
           AU별 완전 분리 (v1.9 사용자 확정): AU는 자기 헤더만 — base 것을 물려받지 않음.
