@@ -8,79 +8,49 @@ export default function SnowEffect() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    let animationFrameId: number;
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
     const handleResize = () => {
+      if (!canvas) return;
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
     };
-
     window.addEventListener('resize', handleResize);
 
-    const numFlakes = Math.floor((width * height) / 10000);
-    const flakes: any[] = [];
+    const flakes = Array.from({ length: 70 }).map(() => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 3 + 1,
+      d: Math.random() * 1 + 0.5,
+    }));
 
-    class Snowflake {
-      x = 0;
-      y = 0;
-      radius = 0;
-      speed = 0;
-      wind = 0;
-      opacity = 0;
-
-      constructor() {
-        this.reset();
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      for (const f of flakes) {
+        ctx.moveTo(f.x, f.y);
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
       }
+      ctx.fill();
 
-      reset() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * -height;
-        this.radius = Math.random() * 3 + 1;
-        this.speed = Math.random() * 1 + 0.5;
-        this.wind = Math.random() * 0.5 - 0.25;
-        this.opacity = Math.random() * 0.7 + 0.3;
-      }
-
-      update() {
-        this.y += this.speed;
-        this.x += Math.sin(this.y / 30) + this.wind;
-
-        if (this.y > height) {
-          this.reset();
-          this.y = 0;
+      for (const f of flakes) {
+        f.y += f.d;
+        f.x += Math.sin(f.y / 30) * 0.5;
+        if (f.y > height) {
+          f.y = -10;
+          f.x = Math.random() * width;
         }
       }
-
-      draw() {
-        if (!ctx) return;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-        ctx.fill();
-      }
-    }
-
-    for (let i = 0; i < numFlakes; i++) {
-      flakes.push(new Snowflake());
-    }
-
-    let animationFrameId: number;
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-      for (const flake of flakes) {
-        flake.update();
-        flake.draw();
-      }
-      animationFrameId = requestAnimationFrame(render);
+      animationFrameId = requestAnimationFrame(draw);
     };
 
-    render();
+    draw();
 
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -95,10 +65,10 @@ export default function SnowEffect() {
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
         pointerEvents: 'none',
-        zIndex: 9999,
+        zIndex: 9999, // 화면 맨 최상단으로 올림
       }}
     />
   );
