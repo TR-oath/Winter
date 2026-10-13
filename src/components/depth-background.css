@@ -1,22 +1,28 @@
 /* ===== 메인 배경 공간감 ===== */
 /* DepthBackground.tsx 와 같은 폴더(src/components)에 두세요. 컴포넌트가 자동으로 불러옵니다.
-   globals.css 는 건드리지 않으며, 모든 규칙이 body.depth-on(메인에서만 붙음) 안에서만 동작합니다. */
+   globals.css 는 건드리지 않습니다. 효과가 켜지는 건 메인에서 body.depth-on 이 붙었을 때뿐입니다. */
 
 :root {
   --depth-vig: rgba(8, 20, 45, 0.20);      /* 비네팅(가장자리 어둡게): 마지막 숫자를 올리면 더 진해짐, 0이면 없음 */
   --depth-fog: rgba(235, 243, 255, 0.16);  /* 안개 색·세기: 마지막 숫자를 0으로 하면 없음 */
   --depth-fog-h: 24%;                      /* 안개가 올라오는 높이 */
+  --depth-out-time: .7s;                   /* 메인을 떠날 때 원래 크기로 줌아웃되는 시간 (길수록 천천히) */
 }
 
-/* 1) 마우스를 따라 배경이 살짝 움직임 (배경은 body::before 에 깔려 있음) */
-body.depth-on::before {
-  transform: translate3d(var(--dx, 0px), var(--dy, 0px), 0) scale(1.06);
-  transition: transform .35s ease-out;
+/* 1) 배경 이동·확대 (배경은 body::before 에 깔려 있음)
+      기본 상태에도 전환을 걸어 두는 것이 핵심 — 그래야 메인을 떠날 때도 부드럽게 돌아옵니다 */
+body::before {
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform var(--depth-out-time) ease-in-out;   /* 떠날 때: 줌아웃 */
   will-change: transform;
 }
+body.depth-on::before {
+  transform: translate3d(var(--dx, 0px), var(--dy, 0px), 0) scale(1.06);
+  transition: transform .35s ease-out;                       /* 들어올 때·마우스 따라 움직일 때 */
+}
 
-/* 2) 비네팅 + 안개 — 배경 위, 콘텐츠 아래 */
-body.depth-on::after {
+/* 2) 비네팅 + 안개 — 배경 위, 콘텐츠 아래. 평소엔 투명하게 두었다가 메인에서만 보이게 함 */
+body::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -25,9 +31,16 @@ body.depth-on::after {
   background:
     radial-gradient(ellipse at 50% 42%, transparent 52%, var(--depth-vig) 100%),
     linear-gradient(to top, var(--depth-fog), transparent var(--depth-fog-h));
+  opacity: 0;
+  transition: opacity var(--depth-out-time) ease-in-out;     /* 떠날 때: 서서히 사라짐 */
+}
+body.depth-on::after {
+  opacity: 1;
+  transition: opacity .35s ease-out;                         /* 들어올 때: 서서히 나타남 */
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.depth-on::before { transition: none; }
+  body::before, body.depth-on::before,
+  body::after, body.depth-on::after { transition: none; }
 }
 /* ===== 메인 배경 공간감 끝 ===== */
