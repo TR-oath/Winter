@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './custom.css';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 import { AuthProvider } from '@/lib/auth';
 import { MainStoreProvider } from '@/lib/mainStore';
