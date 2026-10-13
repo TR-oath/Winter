@@ -1,0 +1,15 @@
+/* ===== 메인 배경 공간감 ===== */
+/* DepthBackground.tsx 와 같은 폴더(src/components)에 두세요. 컴포넌트가 자동으로 불러옵니다.
+   globals.css 는 건드리지 않으며, 모든 규칙이 body.depth-on(메인에서만 붙음) 안에서만 동작합니다. */
+
+/* 마우스를 따라 배경이 살짝 움직임 (배경은 body::before 에 깔려 있음) */
+body.depth-on::before {
+  transform: translate3d(var(--dx, 0px), var(--dy, 0px), 0) scale(1.06);
+  transition: transform .35s ease-out;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.depth-on::before { transition: none; }
+}
+/* ===== 메인 배경 공간감 끝 ===== */
