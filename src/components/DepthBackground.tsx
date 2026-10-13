@@ -1,6 +1,7 @@
 'use client';
 // 메인 페이지 배경 공간감 효과
 //  - 마우스를 움직이면 배경이 반대 방향으로 살짝 밀려 깊이감이 생김 (PC 전용)
+//  - 가장자리를 살짝 어둡게(비네팅) + 아래쪽에 옅은 안개 (항상 켜짐, 모든 화면)
 // 스타일은 같은 폴더의 depth-background.css 에 있고, 이 파일이 자동으로 불러옵니다.
 import './depth-background.css';
 import { useEffect } from 'react';
@@ -11,6 +12,7 @@ import { usePathname } from 'next/navigation';
 const CONFIG = {
   parallax: 18,   // 배경이 움직이는 최대 거리(px). 0이면 움직이지 않음
 };
+// 비네팅·안개의 색과 세기는 depth-background.css 맨 위에서 바꿉니다
 // ──────────────────────────────────────────────
 
 export default function DepthBackground() {
