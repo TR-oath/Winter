@@ -1,0 +1,12 @@
+/* 내가 추가한 스타일 — globals.css 대신 여기에 적습니다 */
+
+/* 자관 헤더 이미지 여백 해결 */
+.rel-backdrop .img > *,
+.rel-backdrop .img img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  transform: none !important;
+}
