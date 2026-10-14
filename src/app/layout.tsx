@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './custom.css';
+import LoadingScreen from '@/components/LoadingScreen';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 import { AuthProvider } from '@/lib/auth';
 import { MainStoreProvider } from '@/lib/mainStore';
@@ -81,6 +82,7 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
         />
       </head>
       <body>
+        <LoadingScreen />
         {/* 서버 연결 확정 후에 앱을 그림 — 설정(ohome.config.json/로컬/env)을 한 번 읽는다 (v2.0) */}
         <ServerBoot>
         <ThemeProvider>
