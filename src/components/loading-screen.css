@@ -1,0 +1,121 @@
+/* ===== 로딩 화면 ===== */
+/* LoadingScreen.tsx 와 같은 폴더(src/components)에 두세요. 컴포넌트가 자동으로 불러옵니다.
+   globals.css 는 건드리지 않습니다. */
+
+/* 바깥 틀: 화면 크기에 고정하고 넘치는 부분은 자른다 (책장이 넘어갈 때 화면이 넓어지는 것 방지) */
+.ls-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;                 /* 토스트(120)·모달(90) 위, 라이트박스(5000) 위 */
+  overflow: hidden;
+  perspective: 2200px;           /* 책장이 넘어갈 때의 원근감 */
+  /* 안전장치: 스크립트가 어떤 이유로 멈춰도 15초 뒤에는 저절로 사라진다 */
+  animation: ls-failsafe .6s ease 15s forwards;
+}
+.ls-hide { pointer-events: none; }
+/* 이미 본 탭에서는 처음부터 숨김 (스크립트가 <html>에 ls-seen 표시를 달아 줌) */
+html.ls-seen .ls-wrap { display: none !important; }
+
+/* 책장(로딩 화면 본체) */
+.ls {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  transform-origin: 0 50%;       /* 왼쪽 모서리가 책의 등(축) */
+  backface-visibility: hidden;
+  /* 위: 배경 이미지 / 아래: 이미지를 못 불러올 때를 대비한 CSS 모눈종이 */
+  background:
+    var(--ls-bg, none) center / cover no-repeat,
+    linear-gradient(rgba(120, 110, 90, .10) 1px, transparent 1px) 0 0 / 31px 31px,
+    linear-gradient(90deg, rgba(120, 110, 90, .10) 1px, transparent 1px) 0 0 / 31px 31px,
+    #f6f3ea;
+}
+/* 넘어가면서 종이가 점점 어두워지는 음영 */
+.ls::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(40, 30, 20, 0), rgba(40, 30, 20, .5));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── 사라지는 방식 1: 책장 넘기기 ── */
+.ls-exit-flip.ls-hide .ls {
+  animation: ls-flip var(--ls-exit-ms, 1100ms) cubic-bezier(.55, .05, .35, 1) forwards;
+  box-shadow: 0 0 90px rgba(30, 20, 10, .35);
+}
+.ls-exit-flip.ls-hide .ls::after { animation: ls-shade var(--ls-exit-ms, 1100ms) ease-in forwards; }
+/* 책장이 서면서 아래 페이지에 지는 그림자 */
+.ls-exit-flip.ls-hide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(30, 20, 10, .32), transparent 55%);
+  animation: ls-cast var(--ls-exit-ms, 1100ms) ease-in-out forwards;
+  pointer-events: none;
+}
+@keyframes ls-flip  { from { transform: rotateY(0); } to { transform: rotateY(-100deg); } }
+@keyframes ls-shade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ls-cast  { 0% { opacity: 0; } 45% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── 사라지는 방식 2: 서서히 투명해짐 (CONFIG.exit = 'fade') ── */
+.ls-exit-fade .ls { transition: opacity .7s ease; }
+.ls-exit-fade.ls-hide .ls { opacity: 0; }
+
+/* 통통 뛰는 이미지 */
+.ls-stage { display: flex; flex-direction: column; align-items: center; }
+.ls-char {
+  width: var(--ls-img-w, 130px);
+  transform-origin: 50% 100%;
+  animation: ls-bounce .85s cubic-bezier(.35, 0, .4, 1) infinite;
+}
+.ls-char img { display: block; width: 100%; height: auto; user-select: none; }
+.ls-shadow {
+  width: calc(var(--ls-img-w, 130px) * .6);
+  height: 10px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: rgba(60, 50, 40, .14);
+  animation: ls-shadow .85s cubic-bezier(.35, 0, .4, 1) infinite;
+}
+@keyframes ls-bounce {
+  0%, 100% { transform: translateY(0) scale(1.04, .94); }
+  50%      { transform: translateY(-16px) scale(.98, 1.03); }
+}
+@keyframes ls-shadow {
+  0%, 100% { transform: scale(1);   opacity: .9; }
+  50%      { transform: scale(.72); opacity: .5; }
+}
+
+/* 로딩바 */
+.ls-bar {
+  width: var(--ls-bar-w, 240px);
+  max-width: 70vw;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ls-bar-c, #c95f7a) 22%, transparent);
+  overflow: hidden;
+}
+.ls-bar i {
+  display: block;
+  height: 100%;
+  width: var(--p, 0%);
+  border-radius: inherit;
+  background: var(--ls-bar-c, #c95f7a);
+  transition: width .35s ease-out;
+}
+
+@keyframes ls-failsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+/* 움직임 줄이기 설정이면 책장 넘기기 대신 짧게 투명해짐 */
+@media (prefers-reduced-motion: reduce) {
+  .ls-exit-flip.ls-hide .ls { animation: none; box-shadow: none; opacity: 0; transition: opacity .2s; }
+  .ls-exit-flip.ls-hide::before { display: none; }
+  .ls-char, .ls-shadow { animation: none; }
+}
+/* ===== 로딩 화면 끝 ===== */
