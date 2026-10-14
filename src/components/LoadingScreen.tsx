@@ -14,7 +14,7 @@ const CONFIG = {
   // 가운데에서 통통 뛰는 이미지. 비워 두면 회색 동글이가 나옵니다.
   //   방법 1) 이미지 링크:  'https://i.postimg.cc/.../char.png'
   //   방법 2) 내 사이트에 올린 파일:  '/loading-char.png'  (GitHub의 public 폴더에 올린 파일 이름)
-  image: '',
+  image: 'https://i.postimg.cc/kX7sBRhp/d6602c666650f1bb.png',
   imageWidth: 130,   // 이미지 가로 크기(px)
 
   // 배경 이미지 (모눈종이). 못 불러오면 CSS로 그린 모눈종이가 대신 나옵니다.
