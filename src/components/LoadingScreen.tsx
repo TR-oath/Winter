@@ -24,7 +24,7 @@ const CONFIG = {
   barColor: '#f33421',   // 로딩바 색
 
   onlyMain: true,        // 사이트를 처음 연 페이지가 메인(/)일 때만 보여 줌 (다른 페이지로 바로 들어오면 안 나옴)
-  oncePerSession: true,  // 한 번 보면 같은 탭에서는 다시 안 나옴 (새로고침해도 안 나옴). false면 메인을 열 때마다 나옴
+  oncePerSession: false,  // 한 번 보면 같은 탭에서는 다시 안 나옴 (새로고침해도 안 나옴). false면 메인을 열 때마다 나옴
 
   minShow: 600,          // 아무리 빨리 끝나도 최소로 보여 줄 시간(ms) — 번쩍임 방지
   maxWait: 10000,        // 이 시간(ms)이 지나면 이미지가 덜 떠도 넘어감
