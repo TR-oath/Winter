@@ -1,16 +1,20 @@
-/* ===== 메인 배경 공간감 ===== */
+/* ===== 메인 배경 공간감 + 빛 알갱이 ===== */
 /* DepthBackground.tsx 와 같은 폴더(src/components)에 두세요. 컴포넌트가 자동으로 불러옵니다.
-   globals.css 는 건드리지 않습니다. 효과가 켜지는 건 메인에서 body.depth-on 이 붙었을 때뿐입니다. */
+   globals.css 는 건드리지 않습니다. 효과가 켜지는 건 메인에서 body.depth-on 이 붙었을 때뿐입니다.
+   층 순서(아래→위): 배경 사진 → 비네팅·안개 → [페이지 내용] → 빛 알갱이 */
 
 :root {
   --depth-vig: rgba(8, 20, 45, 0.20);      /* 비네팅(가장자리 어둡게): 마지막 숫자를 올리면 더 진해짐, 0이면 없음 */
   --depth-fog: rgba(235, 243, 255, 0.16);  /* 안개 색·세기: 마지막 숫자를 0으로 하면 없음 */
   --depth-fog-h: 24%;                      /* 안개가 올라오는 높이 */
-  --depth-out-time: .7s;                   /* 메인을 떠날 때 원래 크기로 줌아웃되는 시간 (길수록 천천히) */
+  --depth-out-time: .7s;                   /* 메인을 떠날 때 원래대로 돌아오는 시간 (길수록 천천히) */
+
+  --depth-dust-move: 2.2;                  /* 알갱이가 마우스를 따라 움직이는 정도(배경의 몇 배, 배경과 반대 방향). 0이면 안 움직임 */
+  --depth-dust-prism: .66;                 /* 알갱이 둘레 프리즘빛 세기: 0이면 없음, 1이면 진함 */
 }
 
 /* 1) 배경 이동·확대 (배경은 body::before 에 깔려 있음)
-      기본 상태에도 전환을 걸어 두는 것이 핵심 — 그래야 메인을 떠날 때도 부드럽게 돌아옵니다 */
+      기본 상태에도 전환을 걸어 두어야 메인을 떠날 때 부드럽게 돌아옵니다 */
 body::before {
   transform: translate3d(0, 0, 0) scale(1);
   transition: transform var(--depth-out-time) ease-in-out;   /* 떠날 때: 줌아웃 */
@@ -39,8 +43,89 @@ body.depth-on::after {
   transition: opacity .35s ease-out;                         /* 들어올 때: 서서히 나타남 */
 }
 
+/* 3) 빛 알갱이 — 페이지 내용 위 가장 앞쪽 층. 글자·클릭을 방해하지 않음(pointer-events 끔).
+      모달(90)·툴팁보다는 아래. 화면 밖으로 삐져나가지 않게 바깥 틀에서 자름 */
+.depth-dust {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;                                        /* 메인이 아닐 때는 아예 그리지 않음 */
+  transition: opacity var(--depth-out-time) ease-in-out, visibility 0s linear var(--depth-out-time);
+}
+body.depth-on .depth-dust {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .35s ease-out, visibility 0s;
+}
+
+/* 기본형: 작은 하얀 알갱이 (tiny · small) — 반짝이며 천천히 떠오름 */
+.depth-dust i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .95) 0 35%, rgba(255, 255, 255, .35) 60%, transparent 76%);
+  filter: blur(var(--bl, 1px));
+  opacity: var(--o);
+  translate: 0 0;                                            /* 마우스 따라 움직이는 값 (transform과 따로 동작) */
+  transition: translate var(--depth-out-time) ease-in-out;
+  animation:
+    depth-dust-float var(--t) ease-in-out var(--d) infinite alternate,
+    depth-dust-twinkle var(--tw) ease-in-out var(--td) infinite alternate;
+  animation-play-state: paused;
+}
+body.depth-on .depth-dust i {
+  /* --dx 는 배경을 미는 값(마우스 반대 방향)이라 -1을 곱하면 마우스를 따라가는 방향. 큰 알갱이일수록(--z) 더 움직임 */
+  translate: calc(var(--dx, 0px) * var(--depth-dust-move) * var(--z, 1) * -1)
+             calc(var(--dy, 0px) * var(--depth-dust-move) * var(--z, 1) * -1);
+  transition: translate .35s ease-out;
+  animation-play-state: running;
+}
+@keyframes depth-dust-float {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(var(--sx), var(--sy), 0); }
+}
+@keyframes depth-dust-twinkle {
+  from { opacity: calc(var(--o) * .3); }
+  to   { opacity: var(--o); }
+}
+
+/* 알갱이 둘레에서 천천히 도는 프리즘빛 (분홍·노랑·초록·하늘·보라) */
+.depth-dust i::before {
+  content: "";
+  position: absolute;
+  inset: -45%;
+  border-radius: 50%;
+  background: conic-gradient(from var(--h, 0deg),
+    rgba(255, 120, 160, .8), rgba(255, 210, 120, .8), rgba(140, 255, 200, .75),
+    rgba(120, 205, 255, .85), rgba(190, 140, 255, .8), rgba(255, 120, 160, .8));
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 38%, #000 68%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, transparent 38%, #000 68%, transparent 100%);
+  opacity: var(--depth-dust-prism);
+  animation: depth-dust-spin var(--rs, 8s) linear infinite;
+  animation-play-state: paused;
+}
+body.depth-on .depth-dust i::before { animation-play-state: running; }
+@keyframes depth-dust-spin { to { transform: rotate(360deg); } }
+
+/* 큰 보케 (포인트): 크고 흐릿하고 투명한 빛 덩어리 */
+.depth-dust i.big {
+  background: radial-gradient(circle, rgba(255, 255, 255, .55), rgba(255, 255, 255, .18) 55%, transparent 72%);
+}
+.depth-dust i.big::before { opacity: calc(var(--depth-dust-prism) * .6); }
+
+/* 휴대폰·터치 화면에서는 알갱이를 숨김 (화면을 가리고 배터리를 쓰기 때문) */
+@media (max-width: 620px), (hover: none) {
+  .depth-dust { display: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body::before, body.depth-on::before,
-  body::after, body.depth-on::after { transition: none; }
+  body::after, body.depth-on::after,
+  .depth-dust, body.depth-on .depth-dust,
+  .depth-dust i, body.depth-on .depth-dust i { transition: none; }
+  .depth-dust i, .depth-dust i::before { animation: none; }
 }
-/* ===== 메인 배경 공간감 끝 ===== */
+/* ===== 메인 배경 공간감 + 빛 알갱이 끝 ===== */
