@@ -2,7 +2,7 @@
 // 메인 페이지 배경 공간감 효과
 //  - 마우스를 움직이면 배경이 반대 방향으로 살짝 밀려 깊이감이 생김 (PC 전용)
 //  - 가장자리를 살짝 어둡게(비네팅) + 아래쪽에 옅은 안개
-//  - 빛 알갱이(먼지): 작은 것 위주 + 큰 보케 몇 개. 둘레에 살짝 프리즘빛이 돎.
+//  - 빛 알갱이(먼지): 작은 것 위주 + 큰 보케 몇 개. 뒤에서 분홍·하늘색 글로우가 번지며 움직임(프리즘빛).
 //    페이지 위에 떠 있는 가장 앞쪽 층이고, 배경과 반대 방향으로 움직임 (PC 메인에서만 보임)
 // 스타일은 같은 폴더의 depth-background.css 에 있고, 이 파일이 자동으로 불러옵니다.
 import './depth-background.css';
@@ -15,10 +15,11 @@ import { usePathname } from 'next/navigation';
 // ★ 여기만 고치면 됩니다 ★
 const CONFIG = {
   parallax: 18,   // 배경이 움직이는 최대 거리(px). 0이면 움직이지 않음
+  size: 1,        // 알갱이 크기 배율 (1 = 기본, 1.5 = 1.5배). 잘 안 보이면 올리고, 너무 크면 내리세요
   dust: {
-    tiny: 7,      // 아주 작은 알갱이 (2~5px)
-    small: 3,     // 작은 알갱이 (5~9px)
-    big: 1,       // 크고 흐릿한 보케 — 포인트 (24~42px)
+    tiny: 7,      // 작은 알갱이 (4~8px)
+    small: 3,     // 조금 큰 알갱이 (8~14px)
+    big: 1,       // 크고 흐릿한 보케 — 포인트 (30~50px)
   },              // 전부 0으로 하면 알갱이가 없어짐
 };
 // 색과 세기는 depth-background.css 맨 위에서 바꿉니다
@@ -26,9 +27,9 @@ const CONFIG = {
 
 // 종류별 범위: s 크기(px) · o 투명도 · bl 번짐(px) · z 마우스를 따라 움직이는 정도(클수록 앞쪽) · t 떠다니는 주기(초)
 const SPEC = {
-  tiny:  { s: [2, 5],   o: [0.5, 0.95],  bl: [0.4, 1],   z: [0.4, 0.8], t: [8, 14] },
-  small: { s: [5, 9],   o: [0.45, 0.85], bl: [0.8, 1.4], z: [0.8, 1.1], t: [7, 12] },
-  big:   { s: [24, 42], o: [0.22, 0.4],  bl: [3, 6],     z: [1.4, 1.8], t: [10, 16] },
+  tiny:  { s: [4, 8],   o: [0.6, 1],     bl: [0.3, 0.8], z: [0.4, 0.8], t: [8, 14] },
+  small: { s: [8, 14],  o: [0.55, 0.95], bl: [0.5, 1.1], z: [0.8, 1.1], t: [7, 12] },
+  big:   { s: [30, 50], o: [0.25, 0.45], bl: [3, 6],     z: [1.4, 1.8], t: [10, 16] },
 } as const;
 type Kind = keyof typeof SPEC;
 interface Dust { kind: Kind; style: CSSProperties }
@@ -40,7 +41,7 @@ function makeDust(counts: Record<Kind, number>): Dust[] {
   (Object.keys(SPEC) as Kind[]).forEach(kind => {
     const sp = SPEC[kind];
     for (let i = 0; i < counts[kind]; i++) {
-      const s = rnd(sp.s[0], sp.s[1]);
+      const s = rnd(sp.s[0], sp.s[1]) * CONFIG.size;
       out.push({
         kind,
         style: {
@@ -53,8 +54,8 @@ function makeDust(counts: Record<Kind, number>): Dust[] {
           ['--d' as string]: '-' + rnd(0, 10).toFixed(1) + 's',
           ['--sx' as string]: rnd(-30, 30).toFixed(0) + 'px',
           ['--sy' as string]: '-' + rnd(10, 50).toFixed(0) + 'px',
-          ['--h' as string]: Math.round(rnd(0, 360)) + 'deg',          // 프리즘빛이 시작되는 각도
-          ['--rs' as string]: rnd(6, 14).toFixed(1) + 's',            // 프리즘빛이 도는 속도
+          ['--sz' as string]: s.toFixed(1),                           // 글로우 번짐을 알갱이 크기에 맞추기 위한 값
+          ['--gt' as string]: rnd(10, 18).toFixed(1) + 's',           // 글로우가 한 바퀴 도는 시간
           ['--tw' as string]: rnd(2, 5).toFixed(1) + 's',
           ['--td' as string]: '-' + rnd(0, 5).toFixed(1) + 's',
         } as CSSProperties,
@@ -120,7 +121,7 @@ export default function DepthBackground() {
   if (!mounted || dust.length === 0) return null;
   return createPortal(
     <div className="depth-dust" aria-hidden="true">
-      {dust.map((d, k) => <i key={k} className={d.kind} style={d.style} />)}
+      {dust.map((d, k) => <i key={k} className={d.kind} style={d.style}><b /></i>)}
     </div>,
     document.body,
   );

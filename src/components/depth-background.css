@@ -10,7 +10,7 @@
   --depth-out-time: .7s;                   /* 메인을 떠날 때 원래대로 돌아오는 시간 (길수록 천천히) */
 
   --depth-dust-move: 2.2;                  /* 알갱이가 마우스를 따라 움직이는 정도(배경의 몇 배, 배경과 반대 방향). 0이면 안 움직임 */
-  --depth-dust-prism: .66;                 /* 알갱이 둘레 프리즘빛 세기: 0이면 없음, 1이면 진함 */
+  --depth-dust-prism: .66;                 /* 알갱이 뒤 프리즘 글로우 세기: 0이면 없음, 1이면 진함 */
 }
 
 /* 1) 배경 이동·확대 (배경은 body::before 에 깔려 있음)
@@ -61,13 +61,12 @@ body.depth-on .depth-dust {
   transition: opacity .35s ease-out, visibility 0s;
 }
 
-/* 기본형: 작은 하얀 알갱이 (tiny · small) — 반짝이며 천천히 떠오름 */
+/* 기본형: 하얀 알갱이 — 반짝이며 천천히 떠오르고, 뒤에서 프리즘 글로우가 번짐 */
 .depth-dust i {
+  --ga: calc(var(--depth-dust-prism) * var(--gk, 1));        /* 글로우 세기 (큰 보케는 --gk 로 더 옅게) */
   position: absolute;
   display: block;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, .95) 0 35%, rgba(255, 255, 255, .35) 60%, transparent 76%);
-  filter: blur(var(--bl, 1px));
+  isolation: isolate;
   opacity: var(--o);
   translate: 0 0;                                            /* 마우스 따라 움직이는 값 (transform과 따로 동작) */
   transition: translate var(--depth-out-time) ease-in-out;
@@ -92,29 +91,59 @@ body.depth-on .depth-dust i {
   to   { opacity: var(--o); }
 }
 
-/* 알갱이 둘레에서 천천히 도는 프리즘빛 (분홍·노랑·초록·하늘·보라) */
-.depth-dust i::before {
+/* 하얀 알갱이 본체 (글로우 위에 놓임) */
+.depth-dust i b {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .98) 0 45%, rgba(255, 255, 255, .45) 66%, transparent 82%);
+  box-shadow: 0 0 4px rgba(90, 140, 220, .35);               /* 밝은 구름 위에서도 보이도록 옅은 푸른 테두리빛 */
+  filter: blur(var(--bl, 1px));
+}
+
+/* 프리즘 글로우: 분홍과 하늘색 두 덩어리가 알갱이 뒤에서 서로 반대로 천천히 돌며 번짐 */
+.depth-dust i::before,
+.depth-dust i::after {
   content: "";
   position: absolute;
-  inset: -45%;
+  inset: -18%;
+  z-index: 0;
   border-radius: 50%;
-  background: conic-gradient(from var(--h, 0deg),
-    rgba(255, 120, 160, .8), rgba(255, 210, 120, .8), rgba(140, 255, 200, .75),
-    rgba(120, 205, 255, .85), rgba(190, 140, 255, .8), rgba(255, 120, 160, .8));
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent 38%, #000 68%, transparent 100%);
-  mask-image: radial-gradient(circle closest-side, transparent 38%, #000 68%, transparent 100%);
-  opacity: var(--depth-dust-prism);
-  animation: depth-dust-spin var(--rs, 8s) linear infinite;
+  filter: blur(calc(var(--sz, 6) * .38px));                  /* 번짐을 알갱이 크기에 비례시킴 */
+}
+.depth-dust i::before {
+  background: rgba(255, 70, 150, .95);
+  animation: depth-glow1 var(--gt, 15s) ease infinite;
   animation-play-state: paused;
 }
-body.depth-on .depth-dust i::before { animation-play-state: running; }
-@keyframes depth-dust-spin { to { transform: rotate(360deg); } }
-
-/* 큰 보케 (포인트): 크고 흐릿하고 투명한 빛 덩어리 */
-.depth-dust i.big {
-  background: radial-gradient(circle, rgba(255, 255, 255, .55), rgba(255, 255, 255, .18) 55%, transparent 72%);
+.depth-dust i::after {
+  background: rgba(60, 225, 255, .95);
+  animation: depth-glow2 var(--gt, 15s) ease infinite;
+  animation-play-state: paused;
 }
-.depth-dust i.big::before { opacity: calc(var(--depth-dust-prism) * .6); }
+body.depth-on .depth-dust i::before,
+body.depth-on .depth-dust i::after { animation-play-state: running; }
+
+@keyframes depth-glow1 {
+  0%, 100% { transform: translate(25%, 25%) scale(1);     opacity: calc(var(--ga) * .75); }
+  25%      { transform: translate(-25%, 25%) scale(.8);   opacity: calc(var(--ga) * .75); }
+  50%      { transform: translate(-25%, -25%) scale(1.2); opacity: calc(var(--ga) * 1.2); }
+  75%      { transform: translate(25%, -25%) scale(1.1);  opacity: calc(var(--ga) * .3); }
+}
+@keyframes depth-glow2 {
+  0%, 100% { transform: translate(-25%, -25%) scale(1);   opacity: calc(var(--ga) * .75); }
+  25%      { transform: translate(25%, -25%) scale(.8);   opacity: calc(var(--ga) * .75); }
+  50%      { transform: translate(25%, 25%) scale(1.2);   opacity: calc(var(--ga) * 1.2); }
+  75%      { transform: translate(-25%, 25%) scale(1.1);  opacity: calc(var(--ga) * .3); }
+}
+
+/* 큰 보케 (포인트): 크고 흐릿하고 투명한 빛 덩어리 — 글로우는 더 옅게 */
+.depth-dust i.big { --gk: .6; }
+.depth-dust i.big b {
+  background: radial-gradient(circle, rgba(255, 255, 255, .55), rgba(255, 255, 255, .18) 55%, transparent 72%);
+  box-shadow: none;
+}
 
 /* 휴대폰·터치 화면에서는 알갱이를 숨김 (화면을 가리고 배터리를 쓰기 때문) */
 @media (max-width: 620px), (hover: none) {
@@ -126,6 +155,6 @@ body.depth-on .depth-dust i::before { animation-play-state: running; }
   body::after, body.depth-on::after,
   .depth-dust, body.depth-on .depth-dust,
   .depth-dust i, body.depth-on .depth-dust i { transition: none; }
-  .depth-dust i, .depth-dust i::before { animation: none; }
+  .depth-dust i, .depth-dust i::before, .depth-dust i::after { animation: none; }
 }
 /* ===== 메인 배경 공간감 + 빛 알갱이 끝 ===== */
