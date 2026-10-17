@@ -1,7 +1,7 @@
 /* ===== 메인 배경 공간감 + 빛 알갱이 ===== */
 /* DepthBackground.tsx 와 같은 폴더(src/components)에 두세요. 컴포넌트가 자동으로 불러옵니다.
    globals.css 는 건드리지 않습니다. 효과가 켜지는 건 메인에서 body.depth-on 이 붙었을 때뿐입니다.
-   층 순서(아래→위): 배경 사진 → 비네팅·안개 → [페이지 내용] → 빛 알갱이 */
+   층 순서(아래→위): 배경 사진 → 비네팅·안개 → [페이지 내용] → 빛기둥 → 렌즈 플레어 → 빛 알갱이 */
 
 :root {
   --depth-vig: rgba(8, 20, 45, 0.20);      /* 비네팅(가장자리 어둡게): 마지막 숫자를 올리면 더 진해짐, 0이면 없음 */
@@ -9,8 +9,20 @@
   --depth-fog-h: 24%;                      /* 안개가 올라오는 높이 */
   --depth-out-time: .7s;                   /* 메인을 떠날 때 원래대로 돌아오는 시간 (길수록 천천히) */
 
+  --depth-light-rgb: 255, 246, 220;        /* 빛기둥 색 (R, G, B) */
+  --depth-light-a: .67;                      /* 빛기둥 세기: 1이 기본, 0이면 없음, 1.5면 더 진함 */
+
+  --depth-flare-a: .86;                      /* 렌즈 플레어 세기(빛 세기에 곱해짐): 1이 기본, 0이면 플레어만 없어짐 */
+  --depth-flare-spread: .45;                /* 마우스에 따라 빛 고리가 퍼지는 정도: 크면 멀리까지 퍼지고, 0이면 광원에 붙어 있음 */
+
+  --lx: .14;                               /* 광원 중심 위치 (화면 가로의 14%) — .dl-source 의 중심과 같아야 함 */
+  --ly: .075;                              /* 광원 중심 위치 (화면 세로의 7.5%) */
+  --mx: .5;                                /* 마우스 위치 기본값 (JS가 움직이는 대로 바꿈) */
+  --my: .5;
+  --fk: .3;
+
   --depth-dust-move: 2.2;                  /* 알갱이가 마우스를 따라 움직이는 정도(배경의 몇 배, 배경과 반대 방향). 0이면 안 움직임 */
-  --depth-dust-prism: .66;                 /* 알갱이 뒤 프리즘 글로우 세기: 0이면 없음, 1이면 진함 */
+  --depth-dust-prism: .56;                 /* 알갱이 뒤 프리즘 글로우 세기: 0이면 없음, 1이면 진함 */
 }
 
 /* 1) 배경 이동·확대 (배경은 body::before 에 깔려 있음)
@@ -43,7 +55,154 @@ body.depth-on::after {
   transition: opacity .35s ease-out;                         /* 들어올 때: 서서히 나타남 */
 }
 
-/* 3) 빛 알갱이 — 페이지 내용 위 가장 앞쪽 층. 글자·클릭을 방해하지 않음(pointer-events 끔).
+/* 3) 빛기둥 — 페이지 위에서 비추는 빛. 왼쪽 위 광원에서 비스듬히 내려오는 빛줄기 3줄.
+      밝은 쪽으로 더해지도록 screen 합성이라 아래 내용이 은은하게 밝아 보임. 클릭은 통과(pointer-events 끔).
+      모달(90)·툴팁보다는 아래, 렌즈 플레어(79)·알갱이(80)보다는 아래 */
+.depth-light {
+  position: fixed;
+  inset: 0;
+  z-index: 78;
+  overflow: hidden;                                          /* 화면 밖으로 삐져나가지 않게 자름 */
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+  visibility: hidden;                                        /* 메인이 아닐 때는 아예 그리지 않음 */
+  transition: opacity var(--depth-out-time) ease-in-out, visibility 0s linear var(--depth-out-time);
+}
+body.depth-on .depth-light {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .35s ease-out, visibility 0s;
+}
+.depth-light > * {
+  position: absolute;
+  pointer-events: none;
+  translate: 0 0;                                            /* 마우스 따라 움직이는 값 (transform과 따로 동작) */
+  transition: translate var(--depth-out-time) ease-in-out;
+}
+body.depth-on .depth-light > * {
+  translate: calc(var(--dx, 0px) * 1.6) calc(var(--dy, 0px) * 1.6);
+  transition: translate .35s ease-out;
+}
+
+/* 광원: 왼쪽 위 바깥에서 퍼지는 따뜻한 빛 */
+.dl-source {
+  top: -30%;
+  left: -18%;
+  width: 64%;
+  height: 75%;
+  background: radial-gradient(circle closest-side,
+    rgba(var(--depth-light-rgb), calc(var(--depth-light-a) * .6)),
+    rgba(var(--depth-light-rgb), calc(var(--depth-light-a) * .22)) 45%,
+    transparent 100%);
+  filter: blur(30px);
+  animation: depth-light-breathe 11s ease-in-out infinite alternate;
+}
+/* 빛기둥: 위에서 아래로 갈수록 옅어지고, 굵기·기울기·속도가 제각각 */
+.dl-ray {
+  top: -25%;
+  height: 165%;
+  transform-origin: 50% 0;
+  background: linear-gradient(to bottom,
+    rgba(var(--depth-light-rgb), calc(var(--depth-light-a) * .55)),
+    rgba(var(--depth-light-rgb), calc(var(--depth-light-a) * .2)) 55%,
+    transparent 100%);
+  filter: blur(16px);
+  animation: depth-light-sway 13s ease-in-out infinite alternate;
+}
+.dl-ray-1 { left: 6%;  width: 15%; --r: -26deg; }
+.dl-ray-2 { left: 22%; width: 10%; --r: -30deg; animation-duration: 16s; animation-delay: -4s; }
+.dl-ray-3 { left: 34%; width: 18%; --r: -23deg; animation-duration: 11s; animation-delay: -8s; }
+@keyframes depth-light-sway {
+  from { transform: rotate(calc(var(--r) - 2deg)); opacity: .7; }
+  to   { transform: rotate(calc(var(--r) + 2deg)); opacity: 1; }
+}
+@keyframes depth-light-breathe {
+  from { transform: scale(.92); opacity: .75; }
+  to   { transform: scale(1.08); opacity: 1; }
+}
+
+/* 4) 렌즈 플레어 — 빛기둥 위, 알갱이 아래. 빛 때문에 생기는 상으로 보이도록 만든 층:
+      · 광원(.dl-source)과 같은 자리에서 눈부심·가로 줄기가 생기고, 광원과 같은 박자(11초)로 숨 쉼
+      · 빛 고리들은 광원에서 마우스 쪽으로 이어지는 한 줄 위에 놓임 → 마우스가 멀어지면 퍼지고, 가까워지면 모임
+      · 스스로 돌아다니지 않음. 마우스가 광원에 가까울수록 더 밝아짐(--fk)
+      · 빛기둥이 마우스에 밀리는 만큼 같이 밀려서 광원에서 떨어져 보이지 않음 */
+.depth-flare {
+  --fa: calc(var(--depth-light-a) * var(--depth-flare-a, 1));
+  position: fixed;
+  inset: 0;
+  z-index: 79;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--depth-out-time) ease-in-out, visibility 0s linear var(--depth-out-time);
+}
+body.depth-on .depth-flare {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .35s ease-out, visibility 0s;
+}
+
+/* 모든 조각의 공통 규칙: 광원(L)에서 마우스(M) 쪽으로 --t 만큼 간 자리에 놓음. t=0 이면 광원 자리 */
+.fl-g {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  pointer-events: none;
+  width: var(--w);
+  height: var(--h, var(--w));
+  margin: calc(var(--h, var(--w)) / -2) 0 0 calc(var(--w) / -2);
+  border-radius: 9999px;
+  translate:
+    calc((var(--lx) + (var(--mx) - var(--lx)) * var(--t) * var(--depth-flare-spread, .8)) * 100vw + var(--dx, 0px) * 1.6 * (1 - var(--t)))
+    calc((var(--ly) + (var(--my) - var(--ly)) * var(--t) * var(--depth-flare-spread, .8)) * 100vh + var(--dy, 0px) * 1.6 * (1 - var(--t)));
+  /* 멀리 있는 고리일수록 늦게 따라와서 탄력 있게 퍼지고 모이는 느낌 */
+  transition: translate calc(.28s + var(--t) * .3s) ease-out;
+  animation: depth-flare-breathe 11s ease-in-out infinite alternate;
+}
+@keyframes depth-flare-breathe {
+  from { transform: scale(.94); opacity: calc((.55 + var(--fk, .3) * .45) * .75); }
+  to   { transform: scale(1.06); opacity: calc(.55 + var(--fk, .3) * .45); }
+}
+
+/* 광원 자리: 눈부심 */
+.fl-core {
+  --t: 0; --w: 16vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side,
+    rgba(255, 255, 255, calc(var(--fa) * .95)),
+    rgba(var(--depth-light-rgb), calc(var(--fa) * .5)) 30%,
+    transparent 100%);
+  filter: blur(2px);
+}
+/* 광원 자리: 가로로 길게 뻗는 줄기 (양끝에 옅은 분홍·하늘빛) */
+.fl-streak {
+  --t: 0; --w: 46vmin; --h: 3px;
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent,
+    rgba(255, 130, 200, calc(var(--fa) * .5)) 24%,
+    rgba(255, 255, 255, calc(var(--fa) * .9)) 50%,
+    rgba(120, 225, 255, calc(var(--fa) * .5)) 76%, transparent);
+  filter: blur(1px);
+}
+/* 빛 고리 6개: 광원에서 마우스 쪽으로 이어지는 선 위 (가까운 것부터 먼 것 순) */
+.fl-g1 { --t: .22; --w: 4vmin;
+  background: radial-gradient(circle closest-side, rgba(150, 220, 220, calc(var(--fa) * .55)), transparent 100%); }
+.fl-g2 { --t: .40; --w: 9vmin;
+  box-shadow: inset 0 0 20px 2px rgba(190, 190, 240, calc(var(--fa) * .25)), 0 0 20px 0 rgba(190, 190, 240, calc(var(--fa) * .25)); }
+.fl-g3 { --t: .62; --w: 6vmin;
+  background: radial-gradient(circle closest-side, rgba(200, 220, 80, calc(var(--fa) * .45)), transparent 100%); }
+.fl-g4 { --t: .85; --w: 16vmin;
+  box-shadow: inset 0 0 40px 2px rgba(200, 230, 200, calc(var(--fa) * .25)), 0 0 13px 2px rgba(200, 230, 200, calc(var(--fa) * .25)); }
+.fl-g5 { --t: 1.05; --w: 8vmin;
+  background: radial-gradient(circle closest-side, rgba(50, 180, 50, calc(var(--fa) * .3)), transparent 100%); }
+.fl-g6 { --t: 1.3; --w: 38vmin;
+  box-shadow: inset 0 0 22px 2px rgba(255, 80, 80, calc(var(--fa) * .3)), 0 0 13px 2px rgba(255, 80, 80, calc(var(--fa) * .3)); }
+
+/* 5) 빛 알갱이 — 페이지 내용 위 가장 앞쪽 층. 글자·클릭을 방해하지 않음(pointer-events 끔).
       모달(90)·툴팁보다는 아래. 화면 밖으로 삐져나가지 않게 바깥 틀에서 자름 */
 .depth-dust {
   position: fixed;
@@ -147,14 +306,19 @@ body.depth-on .depth-dust i::after { animation-play-state: running; }
 
 /* 휴대폰·터치 화면에서는 알갱이를 숨김 (화면을 가리고 배터리를 쓰기 때문) */
 @media (max-width: 620px), (hover: none) {
-  .depth-dust { display: none !important; }
+  .depth-light, .depth-flare, .depth-dust { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   body::before, body.depth-on::before,
   body::after, body.depth-on::after,
+  .depth-light, body.depth-on .depth-light,
+  .depth-light > *, body.depth-on .depth-light > *,
+  .depth-flare, body.depth-on .depth-flare,
+  .fl-g,
   .depth-dust, body.depth-on .depth-dust,
   .depth-dust i, body.depth-on .depth-dust i { transition: none; }
+  .depth-light > *, .depth-flare * { animation: none; }
   .depth-dust i, .depth-dust i::before, .depth-dust i::after { animation: none; }
 }
 /* ===== 메인 배경 공간감 + 빛 알갱이 끝 ===== */

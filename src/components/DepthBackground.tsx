@@ -1,6 +1,9 @@
 'use client';
 // 메인 페이지 배경 공간감 효과
 //  - 마우스를 움직이면 배경이 반대 방향으로 살짝 밀려 깊이감이 생김 (PC 전용)
+//  - 빛기둥: 왼쪽 위 광원에서 비스듬히 내려오는 빛줄기 3줄 — 페이지 위에서 비추는 빛 (클릭은 통과)
+//  - 렌즈 플레어: 광원에서 마우스 쪽으로 이어지는 선 위에 놓인 빛 고리들. 스스로 움직이지 않고,
+//    마우스가 광원에서 멀어지면 퍼지고 가까워지면 모이며, 광원과 같은 박자로 숨 쉼
 //  - 가장자리를 살짝 어둡게(비네팅) + 아래쪽에 옅은 안개
 //  - 빛 알갱이(먼지): 작은 것 위주 + 큰 보케 몇 개. 뒤에서 분홍·하늘색 글로우가 번지며 움직임(프리즘빛).
 //    페이지 위에 떠 있는 가장 앞쪽 층이고, 배경과 반대 방향으로 움직임 (PC 메인에서만 보임)
@@ -15,7 +18,9 @@ import { usePathname } from 'next/navigation';
 // ★ 여기만 고치면 됩니다 ★
 const CONFIG = {
   parallax: 18,   // 배경이 움직이는 최대 거리(px). 0이면 움직이지 않음
-  size: 1,        // 알갱이 크기 배율 (1 = 기본, 1.5 = 1.5배). 잘 안 보이면 올리고, 너무 크면 내리세요
+  light: true,    // 빛기둥(광원 + 비스듬한 빛줄기 3줄)을 쓸지. false면 빛기둥만 빠짐 (휴대폰에서는 항상 숨김)
+  flare: true,    // 렌즈 플레어(마우스에 따라 퍼지고 모이는 빛 고리)를 쓸지. 빛기둥과 따로 켜고 끔
+  size: 0.7,      // 알갱이 크기 배율 (1 = 기본, 1.5 = 1.5배). 잘 안 보이면 올리고, 너무 크면 내리세요
   dust: {
     tiny: 7,      // 작은 알갱이 (4~8px)
     small: 3,     // 조금 큰 알갱이 (8~14px)
@@ -91,23 +96,35 @@ export default function DepthBackground() {
 
   // 마우스 따라 배경 이동 (알갱이는 이 값을 반대로 받아 움직임)
   useEffect(() => {
-    if (!isMain || CONFIG.parallax <= 0) return;
+    if (!isMain) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (window.matchMedia('(hover: none)').matches) return;     // 마우스 없는 화면은 건너뜀
 
     const b = document.body;
-    let raf = 0, nx = 0, ny = 0;
+    let raf = 0, nx = 0, ny = 0, mx = 0.5, my = 0.5;
+    // 광원 위치(CSS의 --lx, --ly). 마우스가 광원에서 얼마나 가까운지로 플레어의 밝기를 정한다
+    const cs = getComputedStyle(document.documentElement);
+    const lx = parseFloat(cs.getPropertyValue('--lx')) || 0.14;
+    const ly = parseFloat(cs.getPropertyValue('--ly')) || 0.075;
     const apply = () => {
       raf = 0;
       // 배경을 6% 키워 두었으므로 화면의 2.5%를 넘게 움직이면 가장자리가 비어 보임
       const amp = Math.min(CONFIG.parallax, window.innerWidth * 0.025, window.innerHeight * 0.025);
       b.style.setProperty('--dx', (-nx * amp).toFixed(1) + 'px');
       b.style.setProperty('--dy', (-ny * amp).toFixed(1) + 'px');
+      // 렌즈 플레어: 마우스 위치와 광원까지의 가까움(0~1)
+      const W = window.innerWidth, H = window.innerHeight;
+      const dist = Math.hypot((mx - lx) * W, (my - ly) * H) / Math.hypot(W, H);
+      b.style.setProperty('--mx', mx.toFixed(3));
+      b.style.setProperty('--my', my.toFixed(3));
+      b.style.setProperty('--fk', Math.max(0, 1 - dist * 1.4).toFixed(2));
     };
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse') return;
       nx = (e.clientX / window.innerWidth) * 2 - 1;
       ny = (e.clientY / window.innerHeight) * 2 - 1;
+      mx = e.clientX / window.innerWidth;
+      my = e.clientY / window.innerHeight;
       if (!raf) raf = requestAnimationFrame(apply);
     };
     window.addEventListener('pointermove', onMove, { passive: true });
@@ -117,12 +134,40 @@ export default function DepthBackground() {
     };
   }, [isMain]);
 
-  // 알갱이 층: body 바로 아래에 붙인다 (페이지 내용 위 가장 앞쪽)
-  if (!mounted || dust.length === 0) return null;
+  // body 바로 아래에 붙인다. 빛기둥 → 렌즈 플레어 → 알갱이 순으로 모두 페이지 위에 겹쳐진다
+  if (!mounted) return null;
   return createPortal(
-    <div className="depth-dust" aria-hidden="true">
-      {dust.map((d, k) => <i key={k} className={d.kind} style={d.style}><b /></i>)}
-    </div>,
+    <>
+      {CONFIG.light && (
+        <div className="depth-light" aria-hidden="true">
+          {/* 빛이 뿜어져 나오는 광원 */}
+          <div className="dl-source" />
+          {/* 겹쳐져서 깊이감을 만드는 대각선 빛기둥들 */}
+          <div className="dl-ray dl-ray-1" />
+          <div className="dl-ray dl-ray-2" />
+          <div className="dl-ray dl-ray-3" />
+        </div>
+      )}
+      {CONFIG.flare && (
+        /* 렌즈 플레어: 광원(눈부심·가로 줄기)과, 광원에서 마우스 쪽으로 이어지는 선 위의 빛 고리 6개.
+           위치는 전부 CSS가 계산하고, 이 파일은 마우스 위치만 알려 준다 */
+        <div className="depth-flare" aria-hidden="true">
+          <i className="fl-g fl-core" />
+          <i className="fl-g fl-streak" />
+          <i className="fl-g fl-g1" />
+          <i className="fl-g fl-g2" />
+          <i className="fl-g fl-g3" />
+          <i className="fl-g fl-g4" />
+          <i className="fl-g fl-g5" />
+          <i className="fl-g fl-g6" />
+        </div>
+      )}
+      {dust.length > 0 && (
+        <div className="depth-dust" aria-hidden="true">
+          {dust.map((d, k) => <i key={k} className={d.kind} style={d.style}><b /></i>)}
+        </div>
+      )}
+    </>,
     document.body,
   );
 }
