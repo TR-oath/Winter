@@ -30,11 +30,11 @@
 body::before {
   transform: translate3d(0, 0, 0) scale(1);
   transition: transform var(--depth-out-time) ease-in-out;   /* 떠날 때: 줌아웃 */
-  will-change: transform;
 }
 body.depth-on::before {
   transform: translate3d(var(--dx, 0px), var(--dy, 0px), 0) scale(1.06);
   transition: transform .35s ease-out;                       /* 들어올 때·마우스 따라 움직일 때 */
+  will-change: transform;                                    /* 메인에 있을 때만 별도 층으로 */
 }
 
 /* 2) 비네팅 + 안개 — 배경 위, 콘텐츠 아래. 평소엔 투명하게 두었다가 메인에서만 보이게 함 */
@@ -201,6 +201,10 @@ body.depth-on .depth-flare {
   background: radial-gradient(circle closest-side, rgba(50, 180, 50, calc(var(--fa) * .3)), transparent 100%); }
 .fl-g6 { --t: 1.3; --w: 38vmin;
   box-shadow: inset 0 0 22px 2px rgba(255, 80, 80, calc(var(--fa) * .3)), 0 0 13px 2px rgba(255, 80, 80, calc(var(--fa) * .3)); }
+
+/* 메인이 아닐 때는 빛·플레어 애니메이션을 멈춤 (안 보이는데 계산하지 않도록) */
+body:not(.depth-on) .depth-light > *,
+body:not(.depth-on) .depth-flare .fl-g { animation-play-state: paused; }
 
 /* 5) 빛 알갱이 — 페이지 내용 위 가장 앞쪽 층. 글자·클릭을 방해하지 않음(pointer-events 끔).
       모달(90)·툴팁보다는 아래. 화면 밖으로 삐져나가지 않게 바깥 틀에서 자름 */

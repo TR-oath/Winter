@@ -14,21 +14,22 @@ const CONFIG = {
   // 가운데에서 통통 뛰는 이미지. 비워 두면 회색 동글이가 나옵니다.
   //   방법 1) 이미지 링크:  'https://i.postimg.cc/.../char.png'
   //   방법 2) 내 사이트에 올린 파일:  '/loading-char.png'  (GitHub의 public 폴더에 올린 파일 이름)
-  image: '/fusion.png',
+  image: '',
   imageWidth: 130,   // 이미지 가로 크기(px)
 
   // 배경 이미지 (모눈종이). 못 불러오면 CSS로 그린 모눈종이가 대신 나옵니다.
-  background: '/loading-bg.png',
+  background: 'https://i.postimg.cc/K8XNjSPn/baegyeong.png',
 
   barWidth: 240,         // 로딩바 길이(px)
   barColor: '#f33421',   // 로딩바 색
 
   onlyMain: true,        // 사이트를 처음 연 페이지가 메인(/)일 때만 보여 줌 (다른 페이지로 바로 들어오면 안 나옴)
-  oncePerSession: false,  // 한 번 보면 같은 탭에서는 다시 안 나옴 (새로고침해도 안 나옴). false면 메인을 열 때마다 나옴
+  oncePerSession: true,  // 한 번 보면 같은 탭에서는 다시 안 나옴 (새로고침해도 안 나옴). false면 메인을 열 때마다 나옴
 
   minShow: 600,          // 아무리 빨리 끝나도 최소로 보여 줄 시간(ms) — 번쩍임 방지
   maxWait: 10000,        // 이 시간(ms)이 지나면 이미지가 덜 떠도 넘어감
-  settleMs: 900,         // 화면의 사진이 모두 뜬 상태가 이만큼(ms) 이어져야 넘어감 (사진이 늦게 나타나는 걸 잡는 시간)
+  settleMs: 1200,         // 화면의 사진이 모두 뜬 상태가 이만큼(ms) 이어져야 넘어감 (사진이 늦게 나타나는 걸 잡는 시간)
+  waitPlaceholdersMs: 3000, // 사진 자리(빈 회색 상자)가 사진으로 바뀌기를 기다리는 최대 시간(ms). 사진이 없는 빈 자리는 이 시간 뒤에 무시함
   waitPageImages: true,  // 첫 화면에 보이는 이미지가 뜰 때까지 기다릴지 (false면 배경 이미지만)
 
   exit: 'fade' as 'flip' | 'fade',   // 사라지는 방식: 'fade' = 서서히 투명해짐 / 'flip' = 책장 넘기기
@@ -57,14 +58,18 @@ function siteBgUrl(): string | null {
 const loadImg = (src: string) =>
   new Promise<void>(res => { const i = new Image(); i.onload = i.onerror = () => res(); i.src = src; });
 
-// 지금 화면 안에 보이는 이미지의 전체 수와, 그중 아직 안 뜬 수 (화면 밖 지연 로딩 이미지는 세지 않음)
-function visibleImgs(): { total: number; pending: number } {
-  const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('#appMain img')).filter(img => {
-    if (!img.getAttribute('src')) return false;
-    const r = img.getBoundingClientRect();
-    return r.width > 0 && r.height > 0 && r.top < window.innerHeight && r.bottom > 0;
-  });
-  return { total: imgs.length, pending: imgs.filter(i => !i.complete).length };
+// 화면 안에 보이는 요소인지 (화면 밖 지연 로딩 이미지는 세지 않음)
+function inView(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && r.top < window.innerHeight && r.bottom > 0;
+}
+
+// 화면에 보이는 이미지 수 / 아직 안 뜬 수 / 사진이 들어올 빈 자리(.ph) 수
+function visibleImgs(): { total: number; pending: number; holders: number } {
+  const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('#appMain img'))
+    .filter(img => img.getAttribute('src') && inView(img));
+  const holders = Array.from(document.querySelectorAll('#appMain .ph:empty')).filter(inView).length;
+  return { total: imgs.length, pending: imgs.filter(i => !i.complete).length, holders };
 }
 
 export default function LoadingScreen() {
@@ -96,17 +101,19 @@ export default function LoadingScreen() {
 
       // 2) 첫 화면 이미지: 앱이 그려지고, 보이는 이미지가 모두 뜬 상태가 잠시 이어질 때까지
       if (CONFIG.waitPageImages) {
-        const need = Math.ceil(CONFIG.settleMs / 150);
+        const need = Math.ceil(CONFIG.settleMs / 200);
         let calm = 0, lastTotal = -1;
         while (!cancelled && left() > 0) {
-          const { total, pending } = visibleImgs();
+          const { total, pending, holders } = visibleImgs();
+          // 사진 주소를 아직 못 받아 빈 자리로 남은 곳이 있으면 (정해진 시간까지만) 더 기다림
+          const waitHolders = holders > 0 && performance.now() - t0 < CONFIG.waitPlaceholdersMs;
           // 앱이 그려졌고, 안 뜬 사진이 없고, 보이는 사진 수가 더 늘지 않는 상태가 이어져야 함
-          const ready = !!document.getElementById('appMain') && pending === 0 && total === lastTotal;
+          const ready = !!document.getElementById('appMain') && pending === 0 && !waitHolders && total === lastTotal;
           lastTotal = total;
           calm = ready ? calm + 1 : 0;
           if (total > 0) bump(55 + Math.round((35 * (total - pending)) / total));   // 로딩바가 사진 수를 따라감
           if (calm >= need) break;
-          await sleep(150);
+          await sleep(200);
         }
       }
       bump(90);

@@ -17,6 +17,7 @@ import { usePathname } from 'next/navigation';
 // ──────────────────────────────────────────────
 // ★ 여기만 고치면 됩니다 ★
 const CONFIG = {
+  maxDefer: 12000, // 효과는 로딩 화면이 끝난 뒤에 시작함. 이 시간(ms)이 지나면 로딩 화면이 남아 있어도 시작
   parallax: 18,   // 배경이 움직이는 최대 거리(px). 0이면 움직이지 않음
   light: true,    // 빛기둥(광원 + 비스듬한 빛줄기 3줄)을 쓸지. false면 빛기둥만 빠짐 (휴대폰에서는 항상 숨김)
   flare: true,    // 렌즈 플레어(마우스에 따라 퍼지고 모이는 빛 고리)를 쓸지. 빛기둥과 따로 켜고 끔
@@ -73,18 +74,42 @@ function makeDust(counts: Record<Kind, number>): Dust[] {
 export default function DepthBackground() {
   const isMain = usePathname() === '/';          // 메인 페이지에서만
   const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);   // 로딩 화면이 끝났는지
   const [dust, setDust] = useState<Dust[]>([]);
 
   // 화면이 그려진 뒤에 알갱이를 무작위로 만든다 (서버 화면과 어긋나지 않게). 휴대폰은 만들지 않음
+  useEffect(() => { setMounted(true); }, []);
+
+  // 로딩 화면이 끝난 뒤에 효과를 시작한다 — 사진을 불러오는 동안 컴퓨터가 효과를 그리느라 느려지지 않게.
+  // 로딩 화면이 없거나 이미 본 탭이면 페이지가 다 로드된 직후에 시작
   useEffect(() => {
-    setMounted(true);
+    let cancelled = false;
+    const t0 = performance.now();
+    const loading = () => {
+      const el = document.querySelector('.ls-wrap');
+      return !!el && !el.classList.contains('ls-hide') && getComputedStyle(el).display !== 'none';
+    };
+    const tick = () => {
+      if (cancelled) return;
+      if (!loading() || performance.now() - t0 > CONFIG.maxDefer) { setReady(true); return; }
+      window.setTimeout(tick, 200);
+    };
+    const go = () => window.setTimeout(tick, 100);
+    if (document.readyState === 'complete') go();
+    else window.addEventListener('load', go, { once: true });
+    return () => { cancelled = true; window.removeEventListener('load', go); };
+  }, []);
+
+  // 알갱이는 효과를 시작할 때 만든다 (휴대폰은 만들지 않음)
+  useEffect(() => {
+    if (!ready) return;
     const touch = window.matchMedia('(hover: none)').matches;
     setDust(touch ? [] : makeDust(CONFIG.dust));
-  }, []);
+  }, [ready]);
 
   // 메인에 있는 동안만 body에 표시를 달아 CSS가 동작하게 함
   useEffect(() => {
-    if (!isMain) return;
+    if (!isMain || !ready) return;
     const b = document.body;
     b.classList.add('depth-on');
     return () => {
@@ -92,11 +117,11 @@ export default function DepthBackground() {
       b.style.removeProperty('--dx');
       b.style.removeProperty('--dy');
     };
-  }, [isMain]);
+  }, [isMain, ready]);
 
   // 마우스 따라 배경 이동 (알갱이는 이 값을 반대로 받아 움직임)
   useEffect(() => {
-    if (!isMain) return;
+    if (!isMain || !ready) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (window.matchMedia('(hover: none)').matches) return;     // 마우스 없는 화면은 건너뜀
 
@@ -132,10 +157,10 @@ export default function DepthBackground() {
       window.removeEventListener('pointermove', onMove);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [isMain]);
+  }, [isMain, ready]);
 
   // body 바로 아래에 붙인다. 빛기둥 → 렌즈 플레어 → 알갱이 순으로 모두 페이지 위에 겹쳐진다
-  if (!mounted) return null;
+  if (!mounted || !ready) return null;
   return createPortal(
     <>
       {CONFIG.light && (
