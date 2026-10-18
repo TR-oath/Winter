@@ -18,7 +18,7 @@ const CONFIG = {
   imageWidth: 130,   // 이미지 가로 크기(px)
 
   // 배경 이미지 (모눈종이). 못 불러오면 CSS로 그린 모눈종이가 대신 나옵니다.
-  background: 'https://i.postimg.cc/K8XNjSPn/baegyeong.png',
+  background: '/loading-bg.png',
 
   barWidth: 240,         // 로딩바 길이(px)
   barColor: '#f33421',   // 로딩바 색
