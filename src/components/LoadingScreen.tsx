@@ -14,7 +14,7 @@ const CONFIG = {
   // 가운데에서 통통 뛰는 이미지. 비워 두면 회색 동글이가 나옵니다.
   //   방법 1) 이미지 링크:  'https://i.postimg.cc/.../char.png'
   //   방법 2) 내 사이트에 올린 파일:  '/loading-char.png'  (GitHub의 public 폴더에 올린 파일 이름)
-  image: '',
+  image: '/fusion.png',
   imageWidth: 130,   // 이미지 가로 크기(px)
 
   // 배경 이미지 (모눈종이). 못 불러오면 CSS로 그린 모눈종이가 대신 나옵니다.
@@ -24,7 +24,7 @@ const CONFIG = {
   barColor: '#f33421',   // 로딩바 색
 
   onlyMain: true,        // 사이트를 처음 연 페이지가 메인(/)일 때만 보여 줌 (다른 페이지로 바로 들어오면 안 나옴)
-  oncePerSession: true,  // 한 번 보면 같은 탭에서는 다시 안 나옴 (새로고침해도 안 나옴). false면 메인을 열 때마다 나옴
+  oncePerSession: false,  // 한 번 보면 같은 탭에서는 다시 안 나옴 (새로고침해도 안 나옴). false면 메인을 열 때마다 나옴
 
   minShow: 600,          // 아무리 빨리 끝나도 최소로 보여 줄 시간(ms) — 번쩍임 방지
   maxWait: 10000,        // 이 시간(ms)이 지나면 이미지가 덜 떠도 넘어감
